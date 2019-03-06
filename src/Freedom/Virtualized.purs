@@ -18,8 +18,8 @@ import Web.Event.Event (Event, target)
 
 -- | The type of virtual list config.
 -- |
--- | - `height`: The height of container
--- | - `rowHeight`: The height of a row view
+-- | - `height`: The px height of container
+-- | - `rowHeight`: The px height of a row view
 -- | - `rowView`: The renderer of a row
 -- | - `rows`: The data for row view
 type Config f state a =
