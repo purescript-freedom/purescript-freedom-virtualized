@@ -1,0 +1,31 @@
+{
+  "name": "purescript-freedom-virtualized",
+  "license": "MIT",
+  "homepage": "https://github.com/purescript-freedom/purescript-freedom-virtualized",
+  "authors": [
+    "Shinya Takahashi <s.takahashi313@gmail.com>"
+  ],
+  "description": "The virtual list to render huge list efficiently for purescript-freedom",
+  "keywords": [
+    "purescript",
+    "virtual-dom",
+    "ui",
+    "virtual-list"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/purescript-freedom/purescript-freedom-virtualized.git"
+  },
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-freedom": "^0.5.0"
+  }
+}
