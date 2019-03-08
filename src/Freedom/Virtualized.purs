@@ -36,58 +36,44 @@ virtualList :: forall f state a. Functor (f state) => Config f state a -> VNode 
 virtualList config =
   H.op $ H.div
     # H.style scrollerStyle
-    # H.didCreate (didCreate config)
-    # H.didUpdate (didUpdate config)
-    # H.didDelete (didDelete config)
-    # H.onScroll (onScroll config)
+    # H.didCreate (renderChildren config)
+    # H.didUpdate (renderChildren config)
+    # H.didDelete (deleteChildren config)
+    # H.onScroll (renderChildrenToEventTarget config)
   where
     scrollerStyle =
       "overflow-x:hidden;overflow-y:scroll;height:" <> show config.height <> "px;"
 
-didCreate
+renderChildren
   :: forall f state a
    . Functor (f state)
   => Config f state a
   -> E.Element
   -> FreeT (f state) (VRender f state) Unit
-didCreate config element = do
+renderChildren config element = do
   scrollTop <- liftEffect $ E.scrollTop element
-  { renderChildren } <- lift operations
-  liftEffect $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
+  r <- lift operations
+  liftEffect $ r.renderChildren (E.toNode element) $ calcVNodes config scrollTop
 
-didUpdate
+deleteChildren
   :: forall f state a
    . Functor (f state)
   => Config f state a
   -> E.Element
   -> FreeT (f state) (VRender f state) Unit
-didUpdate config element = do
-  scrollTop <- liftEffect $ E.scrollTop element
-  { renderChildren } <- lift operations
-  liftEffect $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
+deleteChildren config element = do
+  r <- lift operations
+  liftEffect $ r.renderChildren (E.toNode element) []
 
-didDelete
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
-  -> E.Element
-  -> FreeT (f state) (VRender f state) Unit
-didDelete config element = do
-  { renderChildren } <- lift operations
-  liftEffect $ renderChildren (E.toNode element) []
-
-onScroll
+renderChildrenToEventTarget
   :: forall f state a
    . Functor (f state)
   => Config f state a
   -> Event
   -> FreeT (f state) (VRender f state) Unit
-onScroll config evt =
+renderChildrenToEventTarget config evt =
   case E.fromEventTarget <$> target evt of
-    Just (Just element) -> do
-      scrollTop <- liftEffect $ E.scrollTop element
-      { renderChildren } <- lift operations
-      liftEffect $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
+    Just (Just element) -> renderChildren config element
     _ -> pure unit
 
 calcVNodes :: forall f state a. Functor (f state) => Config f state a -> Number -> Array (VNode f state)
