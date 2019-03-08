@@ -14,7 +14,7 @@ import Data.String.CodeUnits (takeRight)
 import Effect.Class (liftEffect)
 import Foreign.Object (alter)
 import Freedom.Markup as H
-import Freedom.VNode (VNode(..), VElement(..), VRender, renderChildren)
+import Freedom.VNode (VNode(..), VElement(..), VRender, operations)
 import Web.DOM.Element as E
 import Web.Event.Event (Event, target)
 
@@ -52,7 +52,8 @@ didCreate
   -> FreeT (f state) (VRender f state) Unit
 didCreate config element = do
   scrollTop <- liftEffect $ E.scrollTop element
-  lift $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
+  { renderChildren } <- lift operations
+  liftEffect $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
 
 didUpdate
   :: forall f state a
@@ -62,7 +63,8 @@ didUpdate
   -> FreeT (f state) (VRender f state) Unit
 didUpdate config element = do
   scrollTop <- liftEffect $ E.scrollTop element
-  lift $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
+  { renderChildren } <- lift operations
+  liftEffect $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
 
 didDelete
   :: forall f state a
@@ -70,8 +72,9 @@ didDelete
   => Config f state a
   -> E.Element
   -> FreeT (f state) (VRender f state) Unit
-didDelete config element =
-  lift $ renderChildren (E.toNode element) []
+didDelete config element = do
+  { renderChildren } <- lift operations
+  liftEffect $ renderChildren (E.toNode element) []
 
 onScroll
   :: forall f state a
@@ -83,7 +86,8 @@ onScroll config evt =
   case E.fromEventTarget <$> target evt of
     Just (Just element) -> do
       scrollTop <- liftEffect $ E.scrollTop element
-      lift $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
+      { renderChildren } <- lift operations
+      liftEffect $ renderChildren (E.toNode element) $ calcVNodes config scrollTop
     _ -> pure unit
 
 calcVNodes :: forall f state a. Functor (f state) => Config f state a -> Number -> Array (VNode f state)
