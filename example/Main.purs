@@ -56,6 +56,7 @@ item :: Int -> Html
 item i =
   H.keyed (show i) $ H.el $ H.div
     # H.css css
+    # H.style "width: 100%;" -- For add style test
     # H.kids [ H.t $ "Item " <> show i ]
   where
     css =
@@ -65,7 +66,6 @@ item i =
         justify-content: flex-start;
         align-items: center;
         padding: 0 16px;
-        width: 100%;
         border-bottom: 1px solid #EEE;
       }
       .&:last-of-type {

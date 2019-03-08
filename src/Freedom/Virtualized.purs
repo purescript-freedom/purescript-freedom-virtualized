@@ -10,7 +10,9 @@ import Control.Monad.Trans.Class (lift)
 import Data.Array (concat, length, slice)
 import Data.Int (ceil, floor, toNumber)
 import Data.Maybe (Maybe(..))
+import Data.String.CodeUnits (takeRight)
 import Effect.Class (liftEffect)
+import Foreign.Object (alter)
 import Freedom.Markup as H
 import Freedom.VNode (VNode(..), VElement(..), VRender, renderChildren)
 import Web.DOM.Element as E
@@ -107,8 +109,10 @@ styledView { rowHeight, rowView } x =
   withStyle $ rowView x
   where
     style = "height: " <> show rowHeight <> "px;"
-    withStyle (VNode key (Element r)) = VNode key $ Element $ r # H.style style
-    withStyle (VNode key (OperativeElement bf r)) = VNode key $ OperativeElement bf $ r # H.style style
+    addStyle Nothing = Just style
+    addStyle (Just style') = Just $ style' <> if takeRight 1 style' == ";" then style else ";" <> style
+    withStyle (VNode key (Element r)) = VNode key $ Element $ r { props = alter addStyle "style" r.props }
+    withStyle (VNode key (OperativeElement bf r)) = VNode key $ OperativeElement bf $ r { props = alter addStyle "style" r.props }
     withStyle vnode = vnode
 
 padding :: forall f state a. Functor (f state) => Config f state a -> Int -> VNode f state
