@@ -36,7 +36,7 @@ addMany = (_ + 1000)
 view :: State -> Html
 view state =
   H.el $ H.div # H.kids
-  [ H.el $ H.h1 # H.kids [ H.t "Virtual list demo" ]
+    [ H.el $ H.h1 # H.kids [ H.t "Virtual list demo" ]
     , H.el $ H.button
         # H.onClick (const $ reduce addMany)
         # H.kids [ H.t "Add 1000" ]
