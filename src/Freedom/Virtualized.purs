@@ -14,7 +14,7 @@ import Data.String.CodeUnits (takeRight)
 import Effect.Class (liftEffect)
 import Foreign.Object (alter)
 import Freedom.Markup as H
-import Freedom.VNode (VNode(..), VElement(..), VRender, operations)
+import Freedom.VNode (VElement(..), VNode(..), VRender, operations)
 import Web.DOM.Element as E
 import Web.Event.Event (Event, target)
 

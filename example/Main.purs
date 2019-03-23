@@ -6,9 +6,9 @@ import Data.Array ((..))
 import Effect (Effect)
 import Freedom as Freedom
 import Freedom.Markup as H
-import Freedom.TransformF.Simple (VQueryF, transformF, reduce)
-import Freedom.Virtualized (virtualList)
+import Freedom.TransformF.Simple (VQueryF, reduce, transformF)
 import Freedom.VNode (VNode)
+import Freedom.Virtualized (virtualList)
 
 type State = Int
 
