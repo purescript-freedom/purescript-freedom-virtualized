@@ -8,8 +8,16 @@ The virtual list to render huge list efficiently for [purescript-freedom](https:
 
 ## Installation
 
+### Bower
+
 ```
-bower install purescript-freedom-virtualized
+$ bower install purescript-freedom-virtualized
+```
+
+### Spago
+
+```
+$ spago install freedom-virtualized
 ```
 
 ## Documentation
