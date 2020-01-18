@@ -46,6 +46,9 @@ view state =
             , rowHeight: 50.0
             , rows: 0 .. state
             , rowView: item
+            , didCreate: const $ pure unit
+            , didUpdate: const $ pure unit
+            , didDelete: const $ pure unit
             }
         ]
     ]

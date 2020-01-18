@@ -24,11 +24,15 @@ import Web.Event.Event (Event, target)
 -- | - `rowHeight`: The px height of a row view
 -- | - `rowView`: The renderer of a row
 -- | - `rows`: The data for row view
+-- | - Lifecycles
 type Config f state a =
   { height :: Number
   , rowHeight :: Number
   , rowView :: a -> VNode f state
   , rows :: Array a
+  , didCreate :: E.Element -> FreeT (f state) (VRender f state) Unit
+  , didUpdate :: E.Element -> FreeT (f state) (VRender f state) Unit
+  , didDelete :: E.Element -> FreeT (f state) (VRender f state) Unit
   }
 
 -- | Render a virtual list.
@@ -50,7 +54,9 @@ didCreate
   => Config f state a
   -> E.Element
   -> FreeT (f state) (VRender f state) Unit
-didCreate = renderRows
+didCreate config element = do
+  renderRows config element
+  config.didCreate element
 
 didUpdate
   :: forall f state a
@@ -58,7 +64,9 @@ didUpdate
   => Config f state a
   -> E.Element
   -> FreeT (f state) (VRender f state) Unit
-didUpdate = renderRows
+didUpdate config element =do
+  renderRows config element
+  config.didUpdate element
 
 didDelete
   :: forall f state a
@@ -69,6 +77,7 @@ didDelete
 didDelete config element = do
   r <- lift operations
   liftEffect $ r.renderChildren (E.toNode element) []
+  config.didDelete element
 
 onScroll
   :: forall f state a
