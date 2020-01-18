@@ -84,8 +84,8 @@ calcVNodes config scrollTop =
       bufferedStart = if start <= 0 then 0 else start - 1
       bufferedEnd = if end >= rowLength then rowLength else end + 1
       rowVNodes = styledView config <$> slice bufferedStart bufferedEnd config.rows
-      topPadding = padding config bufferedStart
-      bottomPadding = padding config $ rowLength - bufferedEnd
+      topPadding = H.keyed "_virtualized_top_padding" $ padding config bufferedStart
+      bottomPadding = H.keyed "_virtualized_bottom_padding" $ padding config $ rowLength - bufferedEnd
    in concat [ [ topPadding ], rowVNodes, [ bottomPadding ] ]
 
 startIndex :: forall f state a. Config f state a -> Number -> Int
