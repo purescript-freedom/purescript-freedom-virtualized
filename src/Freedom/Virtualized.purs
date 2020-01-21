@@ -7,8 +7,8 @@ import Prelude
 
 import Control.Monad.Free.Trans (FreeT)
 import Control.Monad.Trans.Class (lift)
-import Data.Array (concat, length, slice)
-import Data.Int (ceil, floor, toNumber)
+import Data.Array (concat, snoc)
+import Data.Foldable (foldl)
 import Data.Maybe (Maybe(..))
 import Data.String.CodeUnits (takeRight)
 import Effect.Class (liftEffect)
@@ -21,18 +21,25 @@ import Web.Event.Event (Event, target)
 -- | The type of virtual list config.
 -- |
 -- | - `height`: The px height of container
--- | - `rowHeight`: The px height of a row view
--- | - `rowView`: The renderer of a row
 -- | - `rows`: The data for row view
+-- | - `rowView`: The renderer of a row
+-- | - `calcRowHeight`: The calculator of a row view's px height
 -- | - Lifecycles
 type Config f state a =
   { height :: Number
-  , rowHeight :: Number
-  , rowView :: a -> VNode f state
   , rows :: Array a
+  , rowView :: a -> VNode f state
+  , calcRowHeight :: a -> Number
   , didCreate :: E.Element -> FreeT (f state) (VRender f state) Unit
   , didUpdate :: E.Element -> FreeT (f state) (VRender f state) Unit
   , didDelete :: E.Element -> FreeT (f state) (VRender f state) Unit
+  }
+
+type RenderingParams f state =
+  { topPadding :: Number
+  , bottomPadding :: Number
+  , renderingHeight :: Number
+  , renderingTargets :: Array (VNode f state)
   }
 
 -- | Render a virtual list.
@@ -103,24 +110,13 @@ renderRows config element = do
 
 calcVNodes :: forall f state a. Functor (f state) => Config f state a -> Number -> Array (VNode f state)
 calcVNodes config scrollTop =
-  let rowLength = length config.rows
-      start = startIndex config scrollTop
-      end = start + renderingSize config
-      bufferedStart = if start <= 0 then 0 else start - 1
-      bufferedEnd = if end >= rowLength then rowLength else end + 1
-      rowVNodes = styledView config <$> slice bufferedStart bufferedEnd config.rows
-      topPadding = H.keyed "_virtualized_top_padding" $ padding config bufferedStart
-      bottomPadding = H.keyed "_virtualized_bottom_padding" $ padding config $ rowLength - bufferedEnd
-   in concat [ [ topPadding ], rowVNodes, [ bottomPadding ] ]
+  let params = calcRenderingParams config scrollTop
+      topPadding = H.keyed "_virtualized_top_padding" $ padding params.topPadding
+      bottomPadding = H.keyed "_virtualized_bottom_padding" $ padding params.bottomPadding
+   in concat [ [ topPadding ], params.renderingTargets, [ bottomPadding ] ]
 
-startIndex :: forall f state a. Config f state a -> Number -> Int
-startIndex { rowHeight } scrollTop = floor $ scrollTop / rowHeight
-
-renderingSize :: forall f state a. Config f state a -> Int
-renderingSize { height, rowHeight } = ceil $ height / rowHeight
-
-styledView :: forall f state a. Functor (f state) => Config f state a -> a -> VNode f state
-styledView { rowHeight, rowView } x =
+styledView :: forall f state a. Functor (f state) => Config f state a -> Number -> a -> VNode f state
+styledView { rowView } rowHeight x =
   withStyle $ rowView x
   where
     style = "height: " <> show rowHeight <> "px;"
@@ -130,8 +126,43 @@ styledView { rowHeight, rowView } x =
     withStyle (VNode key (OperativeElement bf r)) = VNode key $ OperativeElement bf $ r { props = alter addStyle "style" r.props }
     withStyle vnode = vnode
 
-padding :: forall f state a. Functor (f state) => Config f state a -> Int -> VNode f state
-padding { rowHeight } units =
+padding :: forall f state. Functor (f state) => Number -> VNode f state
+padding height =
   H.el $ H.div # H.style ("height: " <> show height <> "px;")
+
+calcRenderingParams
+  :: forall f state a
+   . Functor (f state)
+  => Config f state a
+  -> Number
+  -> RenderingParams f state
+calcRenderingParams config scrollTop =
+  foldl
+    (calcRenderingParamsByItem config scrollTop)
+    { topPadding: 0.0
+    , bottomPadding: 0.0
+    , renderingHeight: 0.0
+    , renderingTargets: []
+    }
+    config.rows
+
+calcRenderingParamsByItem
+  :: forall f state a
+   . Functor (f state)
+  => Config f state a
+  -> Number
+  -> RenderingParams f state
+  -> a
+  -> RenderingParams f state
+calcRenderingParamsByItem config scrollTop params x =
+  if params.topPadding + rowHeight < scrollTop then
+    params { topPadding = params.topPadding + rowHeight }
+  else if params.renderingHeight < config.height + rowHeight then
+    params
+      { renderingHeight = params.renderingHeight + rowHeight
+      , renderingTargets = snoc params.renderingTargets $ styledView config rowHeight x
+      }
+  else
+    params { bottomPadding = params.bottomPadding + rowHeight }
   where
-    height = toNumber units * rowHeight
+    rowHeight = config.calcRowHeight x
