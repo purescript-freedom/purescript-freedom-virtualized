@@ -43,9 +43,9 @@ view state =
     , H.el $ H.div # H.css css # H.kids
         [ virtualList
             { height: 500.0
-            , rowHeight: 50.0
             , rows: 0 .. state
             , rowView: item
+            , calcRowHeight: const 50.0
             , didCreate: const $ pure unit
             , didUpdate: const $ pure unit
             , didDelete: const $ pure unit
