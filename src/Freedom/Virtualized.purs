@@ -5,16 +5,14 @@ module Freedom.Virtualized
 
 import Prelude
 
-import Control.Monad.Free.Trans (FreeT)
-import Control.Monad.Trans.Class (lift)
 import Data.Array (concat, snoc)
 import Data.Foldable (foldl)
 import Data.Maybe (Maybe(..))
 import Data.String.CodeUnits (takeRight)
-import Effect.Class (liftEffect)
+import Effect (Effect)
 import Foreign.Object (alter)
 import Freedom.Markup as H
-import Freedom.VNode (VElement(..), VNode(..), VRender, operations)
+import Freedom.UI (Operation, VNode, modifyVObject)
 import Web.DOM.Element as E
 import Web.Event.Event (Event, target)
 
@@ -25,27 +23,28 @@ import Web.Event.Event (Event, target)
 -- | - `rowView`: The renderer of a row
 -- | - `calcRowHeight`: The calculator of a row view's px height
 -- | - Lifecycles
-type Config f state a =
+type Config state a =
   { height :: Number
   , rows :: Array a
-  , rowView :: a -> VNode f state
+  , rowView :: a -> VNode state
   , calcRowHeight :: a -> Number
-  , didCreate :: E.Element -> FreeT (f state) (VRender f state) Unit
-  , didUpdate :: E.Element -> FreeT (f state) (VRender f state) Unit
-  , didDelete :: E.Element -> FreeT (f state) (VRender f state) Unit
+  , didCreate :: E.Element -> Operation state -> Effect Unit
+  , didUpdate :: E.Element -> Operation state -> Effect Unit
+  , didDelete :: E.Element -> Operation state -> Effect Unit
   }
 
-type RenderingParams f state =
+type RenderingParams state =
   { topPadding :: Number
   , bottomPadding :: Number
   , renderingHeight :: Number
-  , renderingTargets :: Array (VNode f state)
+  , renderingTargets :: Array (VNode state)
   }
 
 -- | Render a virtual list.
-virtualList :: forall f state a. Functor (f state) => Config f state a -> VNode f state
+virtualList :: forall state a. Config state a -> VNode state
 virtualList config =
-  H.op $ H.div
+  H.div
+    # H.renderingManually
     # H.style scrollerStyle
     # H.didCreate (didCreate config)
     # H.didUpdate (didUpdate config)
@@ -56,86 +55,81 @@ virtualList config =
       "overflow-x:hidden;overflow-y:scroll;height:" <> show config.height <> "px;"
 
 didCreate
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
+  :: forall state a
+   . Config state a
   -> E.Element
-  -> FreeT (f state) (VRender f state) Unit
-didCreate config element = do
-  renderRows config element
-  config.didCreate element
+  -> Operation state
+  -> Effect Unit
+didCreate config element operation = do
+  renderRows config element operation
+  config.didCreate element operation
 
 didUpdate
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
+  :: forall state a
+   . Config state a
   -> E.Element
-  -> FreeT (f state) (VRender f state) Unit
-didUpdate config element =do
-  renderRows config element
-  config.didUpdate element
+  -> Operation state
+  -> Effect Unit
+didUpdate config element operation = do
+  renderRows config element operation
+  config.didUpdate element operation
 
 didDelete
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
+  :: forall state a
+   . Config state a
   -> E.Element
-  -> FreeT (f state) (VRender f state) Unit
-didDelete config element = do
-  r <- lift operations
-  liftEffect $ r.renderChildren (E.toNode element) []
-  config.didDelete element
+  -> Operation state
+  -> Effect Unit
+didDelete config element operation = do
+  operation.renderer.renderChildren (E.toNode element) []
+  config.didDelete element operation
 
 onScroll
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
+  :: forall state a
+   . Config state a
   -> Event
-  -> FreeT (f state) (VRender f state) Unit
-onScroll config evt =
+  -> Operation state
+  -> Effect Unit
+onScroll config evt operation =
   case E.fromEventTarget <$> target evt of
-    Just (Just element) -> renderRows config element
+    Just (Just element) -> renderRows config element operation
     _ -> pure unit
 
 renderRows
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
+  :: forall state a
+   . Config state a
   -> E.Element
-  -> FreeT (f state) (VRender f state) Unit
-renderRows config element = do
-  scrollTop <- liftEffect $ E.scrollTop element
-  r <- lift operations
-  liftEffect $ r.renderChildren (E.toNode element) $ calcVNodes config scrollTop
+  -> Operation state
+  -> Effect Unit
+renderRows config element operation = do
+  scrollTop <- E.scrollTop element
+  operation.renderer.renderChildren (E.toNode element) $ calcVNodes config scrollTop
 
-calcVNodes :: forall f state a. Functor (f state) => Config f state a -> Number -> Array (VNode f state)
+calcVNodes :: forall state a. Config state a -> Number -> Array (VNode state)
 calcVNodes config scrollTop =
   let params = calcRenderingParams config scrollTop
       topPadding = H.keyed "_virtualized_top_padding" $ padding params.topPadding
       bottomPadding = H.keyed "_virtualized_bottom_padding" $ padding params.bottomPadding
    in concat [ [ topPadding ], params.renderingTargets, [ bottomPadding ] ]
 
-styledView :: forall f state a. Functor (f state) => Config f state a -> Number -> a -> VNode f state
+styledView :: forall state a. Config state a -> Number -> a -> VNode state
 styledView { rowView } rowHeight x =
   withStyle $ rowView x
   where
     style = "height: " <> show rowHeight <> "px;"
     addStyle Nothing = Just style
     addStyle (Just style') = Just $ style' <> if takeRight 1 style' == ";" then style else ";" <> style
-    withStyle (VNode key (Element r)) = VNode key $ Element $ r { props = alter addStyle "style" r.props }
-    withStyle (VNode key (OperativeElement bf r)) = VNode key $ OperativeElement bf $ r { props = alter addStyle "style" r.props }
-    withStyle vnode = vnode
+    withStyle = modifyVObject \r -> r { props = alter addStyle "style" r.props }
 
-padding :: forall f state. Functor (f state) => Number -> VNode f state
+padding :: forall state. Number -> VNode state
 padding height =
-  H.el $ H.div # H.style ("height: " <> show height <> "px;")
+  H.div # H.style ("height: " <> show height <> "px;")
 
 calcRenderingParams
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
+  :: forall state a
+   . Config state a
   -> Number
-  -> RenderingParams f state
+  -> RenderingParams state
 calcRenderingParams config scrollTop =
   foldl
     (calcRenderingParamsByItem config scrollTop)
@@ -147,13 +141,12 @@ calcRenderingParams config scrollTop =
     config.rows
 
 calcRenderingParamsByItem
-  :: forall f state a
-   . Functor (f state)
-  => Config f state a
+  :: forall state a
+   . Config state a
   -> Number
-  -> RenderingParams f state
+  -> RenderingParams state
   -> a
-  -> RenderingParams f state
+  -> RenderingParams state
 calcRenderingParamsByItem config scrollTop params x =
   if params.topPadding + rowHeight < scrollTop then
     params { topPadding = params.topPadding + rowHeight }
