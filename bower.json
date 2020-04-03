@@ -14,7 +14,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/purescript-freedom/purescript-freedom-virtualized.git"
+    "url": "https://github.com/purescript-freedom/purescript-freedom-virtualized"
   },
   "moduleType": [
     "node"
@@ -26,6 +26,6 @@
     "output"
   ],
   "dependencies": {
-    "purescript-freedom": "^1.0.0"
+    "purescript-freedom": "^2.0.0"
   }
 }
