@@ -108,8 +108,8 @@ renderRows config element operation = do
 calcVNodes :: forall state a. Config state a -> Number -> Array (VNode state)
 calcVNodes config scrollTop =
   let params = calcRenderingParams config scrollTop
-      topPadding = H.keyed "_virtualized_top_padding" $ padding params.topPadding
-      bottomPadding = H.keyed "_virtualized_bottom_padding" $ padding params.bottomPadding
+      topPadding = H.key "_virtualized_top_padding" $ padding params.topPadding
+      bottomPadding = H.key "_virtualized_bottom_padding" $ padding params.bottomPadding
    in concat [ [ topPadding ], params.renderingTargets, [ bottomPadding ] ]
 
 styledView :: forall state a. Config state a -> Number -> a -> VNode state

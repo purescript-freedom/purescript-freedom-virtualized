@@ -53,7 +53,8 @@ view state =
 
 item :: Int -> VNode State
 item i =
-  H.keyed (show i) $ H.div
+  H.div
+    # H.key (show i)
     # H.css css
     # H.style "width: 100%;" -- For add style test
     # H.kids [ H.t $ "Item " <> show i ]
