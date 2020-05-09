@@ -67,6 +67,7 @@ item i =
         align-items: center;
         padding: 0 16px;
         border-bottom: 1px solid #EEE;
+        box-sizing: border-box;
       }
       .&:last-of-type {
         border-bottom: none;
