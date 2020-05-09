@@ -52,7 +52,7 @@ virtualList config =
     # H.onScroll (onScroll config)
   where
     scrollerStyle =
-      "overflow-x:hidden;overflow-y:scroll;height:" <> show config.height <> "px;"
+      "overflow:auto;height:" <> show config.height <> "px;"
 
 didCreate
   :: forall state a
